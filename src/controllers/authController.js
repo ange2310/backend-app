@@ -9,8 +9,8 @@ const path = require('path');
 const prisma = new PrismaClient();
 const saltRounds = 10;
 
-
-// Función para enviar correo 
+//
+// Función para enviar correoo
 const sendEmail = async (to, subject, htmlContent) => {
   console.log('\n========== CORREO ELECTRÓNICO ==========');
   console.log(`PARA: ${to}`);
