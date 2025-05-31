@@ -5,7 +5,7 @@ exports.listarDirecciones = async (req, res) => {
   try {
     console.log('Intento de obtener direcciones para el usuario ID:', req.user?.id);
     
-    // Para depuración, siempre devolver un array vacío primero
+    // Para depuración siempre devolver un array vacío primero
     return res.status(200).json([]);
   } catch (error) {
     console.error("Error al obtener direcciones:", error);
