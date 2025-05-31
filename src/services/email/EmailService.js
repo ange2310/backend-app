@@ -7,7 +7,7 @@ const sendEmail = async (to, subject, htmlContent) => {
     console.log('\n========== CORREO ELECTRÓNICO ==========');
     console.log(`PARA: ${to}`);
     console.log(`ASUNTO: ${subject}`);
-    console.log('CONTENIDO:');
+    console.log('CONTENIDO HTML:');
     console.log(htmlContent);
     console.log('========================================\n');
     return true;
@@ -20,7 +20,7 @@ const sendEmail = async (to, subject, htmlContent) => {
       return false;
     }
     
-    // Crear transportador
+  
     const transporter = nodemailer.createTransport({
       service: process.env.EMAIL_SERVICE,
       auth: {
