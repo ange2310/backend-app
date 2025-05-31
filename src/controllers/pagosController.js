@@ -5,7 +5,7 @@ exports.crearIntencion = async (req, res) => {
   try {
     const { pedidoId } = req.params;
     
-    // Verificar que el pedido existe
+    // Verificar que el pedido existee
     const pedido = await prisma.pedidos.findUnique({
       where: { id: pedidoId }
     });
