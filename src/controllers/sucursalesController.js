@@ -1,6 +1,6 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
-
+// Controlador para manejar las sucursales
 exports.crearSucursal = async (req, res) => {
   try {
     const { nombre, direccion, comuna, restaurante_Id } = req.body;
