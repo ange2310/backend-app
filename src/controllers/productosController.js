@@ -40,7 +40,7 @@ exports.obtenerProducto = async (req, res) => {
   }
 };
 
-// Método para listar productos por restaurante
+// Método para listar productos por restaurantes
 exports.listarProductosPorRestaurante = async (req, res) => {
   try {
     const { restauranteId } = req.params;
