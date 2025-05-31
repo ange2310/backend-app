@@ -81,7 +81,7 @@ exports.getCalificacionesRepartidor = async (req, res) => {
   try {
     const { repartidorId } = req.params;
     
-    // Obtener pedidos del repartidor con calificaciones
+    // Obtener pedidos del repartidor con calificacioness
     const pedidosRepartidor = await prisma.pedidos.findMany({
       where: {
         repartidor_Id: repartidorId,
