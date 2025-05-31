@@ -3,14 +3,11 @@ const {PrismaClient} = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
 const nodemailer = require('nodemailer');
-const fs = require('fs');
-const path = require('path');
 
 const prisma = new PrismaClient();
 const saltRounds = 10;
 
-//
-// Función para enviar correoo
+// Función para enviar correo
 const sendEmail = async (to, subject, htmlContent) => {
   console.log('\n========== CORREO ELECTRÓNICO ==========');
   console.log(`PARA: ${to}`);
@@ -25,7 +22,7 @@ const sendEmail = async (to, subject, htmlContent) => {
         return false;
       }
       
-      const transporter = nodemailer.createTransport({
+      const transporter = nodemailer.createTransporter({
         service: process.env.EMAIL_SERVICE || 'gmail',
         auth: {
           user: process.env.EMAIL_USER || 'fastfood.notificaciones@gmail.com',
@@ -60,7 +57,7 @@ exports.register = async(req, res) => {
 
         // Verificar si el usuario ya existe
         console.log('Verificando si el usuario existe...');
-        const existingUser = await prisma.Usuarios.findUnique({
+        const existingUser = await prisma.usuarios.findUnique({
             where: {
                 email: email,
             },
@@ -108,14 +105,14 @@ exports.register = async(req, res) => {
         const userData = {
             nombreCompleto,
             email,
-            contrase_a: hashedPassword,
+            contrase_a: hashedPassword, 
             telefono: telefonoNum,
             cedula: cedulaNum,
             direccion,
             rol,
             vehiculo: rol === 'Repartidor' ? vehiculo : null,
             verificado, 
-            historialDirecciones: [  // Formato MongoDB
+            historialDirecciones: [
                 {
                     comuna: comunaNum,
                     barrio: direccion,
@@ -128,7 +125,7 @@ exports.register = async(req, res) => {
         
         // Crear el usuario en la base de datos
         console.log('Creando usuario en la base de datos...');
-        const newUser = await prisma.Usuarios.create({
+        const newUser = await prisma.usuarios.create({ 
             data: userData
         });
 
@@ -141,7 +138,7 @@ exports.register = async(req, res) => {
             {expiresIn: '24h'}
         );
 
-        // Crear el contenido del correo según el rol
+  
         let htmlCorreo = `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #e0e0e0; border-radius: 5px;">
             <div style="text-align: center; margin-bottom: 20px;">
@@ -161,7 +158,7 @@ exports.register = async(req, res) => {
             htmlCorreo += `
             <p>Como repartidor, ahora puedes comenzar a aceptar entregas y formar parte de nuestro equipo de distribución.</p>
             `;
-        } else { // Cliente
+        } else { 
             htmlCorreo += `
             <p>Como cliente, ahora puedes comenzar a ordenar comida de tus restaurantes favoritos.</p>
             `;
@@ -173,7 +170,6 @@ exports.register = async(req, res) => {
         </div>
         `;
 
-        // Intentar enviar el correo (no detiene el registro si falla)
         try {
             console.log('Intentando enviar correo de bienvenida a:', email);
             await sendEmail(email, 'Bienvenido a FastFood', htmlCorreo);
@@ -213,26 +209,52 @@ exports.register = async(req, res) => {
     }
 };
 
-// Login de usuario
+// Login de usuario 
 exports.login = async(req, res) => {
     try {
+        console.log('=== INICIO DE LOGIN ===');
+        console.log('Body recibido:', req.body);
+        
         const {email, password} = req.body;
 
+        // Validaciones básicas
+        if (!email || !password) {
+            console.log('Error: Email o contraseña faltantes');
+            return res.status(400).json({
+                message: 'Email y contraseña son requeridos'
+            });
+        }
+
+        console.log('Buscando usuario con email:', email);
+
         // Buscar el usuario en la base de datos
-        const user = await prisma.Usuarios.findUnique({
+        const user = await prisma.usuarios.findUnique({ 
             where: {
                 email: email,
             },
         });
+        
+        console.log('Usuario encontrado:', user ? 'SÍ' : 'NO');
+        
         if (!user) {
+            console.log('Usuario no encontrado para email:', email);
             return res.status(401).json({message: 'Credenciales inválidas'});
         }
 
+        console.log('Verificando contraseña...');
+        console.log('Contraseña hasheada en BD:', user.contrase_a);
+
         // Verificar la contraseña
-        const isPasswordValid = await bcrypt.compare(password, user.contrase_a);
+        const isPasswordValid = await bcrypt.compare(password, user.contrase_a); 
+        
+        console.log('Contraseña válida:', isPasswordValid);
+        
         if (!isPasswordValid) {
+            console.log('Contraseña inválida para usuario:', email);
             return res.status(401).json({message: 'Credenciales inválidas'});
         }
+
+        console.log('Generando token JWT...');
 
         // Generar token de acceso
         const token = jwt.sign(
@@ -240,6 +262,9 @@ exports.login = async(req, res) => {
             process.env.JWT_SECRET,
             {expiresIn: '24h'}
         );
+
+        console.log('Token generado exitosamente');
+        console.log('=== LOGIN EXITOSO ===');
 
         res.status(200).json({
             message: 'Inicio de sesión exitoso',
@@ -257,33 +282,39 @@ exports.login = async(req, res) => {
             },
         });
     } catch (error) {
-        console.error('Error al iniciar sesión:', error);
-        res.status(500).json({message: 'Error al iniciar sesión', error: error.message});
+        console.error('=== ERROR EN LOGIN ===');
+        console.error('Error completo:', error);
+        console.error('Error message:', error.message);
+        console.error('Error stack:', error.stack);
+        
+        res.status(500).json({
+            message: 'Error al iniciar sesión', 
+            error: error.message,
+            details: process.env.NODE_ENV === 'development' ? {
+                stack: error.stack,
+                name: error.name
+            } : undefined
+        });
     }
 };
 
-// Solicitud para recuperar contraseña
 exports.requestPasswordReset = async(req, res) => {
     try {
         const {email} = req.body;
 
-        // Buscar el usuario en la base de datos
-        const user = await prisma.Usuarios.findUnique({
+        const user = await prisma.usuarios.findUnique({ 
             where: {
                 email: email,
             },
         });
         if (!user) {
-            // Por seguridad, no informamos si el email existe o no
             return res.status(200).json({ message: 'Si el correo existe, recibirás instrucciones para recuperar tu contraseña' });
         }
 
-        // Generar token de recuperación
         const token = crypto.randomBytes(32).toString('hex');
-        const expirationDate = new Date(Date.now() + 3600000); // 1 hora de validez
+        const expirationDate = new Date(Date.now() + 3600000);
 
-        // Guardar token en bd
-        await prisma.Usuarios.update({
+        await prisma.usuarios.update({ 
             where: {id: user.id},
             data: {
                 resetToken: token,
@@ -291,10 +322,8 @@ exports.requestPasswordReset = async(req, res) => {
             }
         });
 
-        // URL para restablecer contraseña (frontend)
         const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${token}`;
 
-        // Enviar correo real
         await sendEmail(
             email,
             'Recuperación de contraseña - FastFood',
@@ -324,17 +353,15 @@ exports.requestPasswordReset = async(req, res) => {
     }
 };
 
-// Resetear contraseña
 exports.resetPassword = async (req, res) => {
     try {
         const { token, newPassword } = req.body;
   
-        // Buscar usuario por token
-        const user = await prisma.Usuarios.findFirst({
+        const user = await prisma.usuarios.findFirst({ 
             where: {
                 resetToken: token,
                 resetTokenExpiry: {
-                    gt: new Date().toISOString(), // Token no expirado
+                    gt: new Date().toISOString(),
                 },
             },
         });
@@ -343,14 +370,12 @@ exports.resetPassword = async (req, res) => {
             return res.status(400).json({ message: 'Token inválido o expirado' });
         }
   
-        // Encriptar nueva contraseña
         const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
   
-        // Actualizar contraseña y eliminar token
-        await prisma.Usuarios.update({
+        await prisma.usuarios.update({ 
             where: { id: user.id },
             data: {
-                contrase_a: hashedPassword,
+                contrase_a: hashedPassword, 
                 resetToken: null,
                 resetTokenExpiry: null,
             },
@@ -363,14 +388,11 @@ exports.resetPassword = async (req, res) => {
     }
 };
 
-// Obtener información del usuario actual
 exports.getCurrentUser = async (req, res) => {
   try {
-    // req.user.id está disponible gracias al middleware de autenticación :)
     const userId = req.user.id;
     
-    // Buscar el usuario en la base de datos
-    const user = await prisma.Usuarios.findUnique({
+    const user = await prisma.usuarios.findUnique({ 
       where: { id: userId }
     });
     
@@ -398,11 +420,10 @@ exports.validateCedula = async (req, res) => {
   try {
     const { cedula } = req.params;
     
-    // Validar formato de cédula si es necesario
     if (!cedula || cedula.length < 5) {
       return res.status(400).json({ message: 'Formato de cédula inválido' });
     }
-    const existingUser = await prisma.Usuarios.findFirst({
+    const existingUser = await prisma.usuarios.findFirst({ 
       where: { cedula: parseInt(cedula) }
     });
     
@@ -432,7 +453,7 @@ exports.validateTelefono = async (req, res) => {
       return res.status(400).json({ message: 'Formato de teléfono inválido' });
     }
 
-    const existingUser = await prisma.Usuarios.findFirst({
+    const existingUser = await prisma.usuarios.findFirst({ 
       where: { telefono: parseInt(telefono) }
     });
     
@@ -454,7 +475,6 @@ exports.validateTelefono = async (req, res) => {
   }
 };
 
-// Solicitar recuperación de contraseña
 exports.forgotPassword = async (req, res) => {
   try {
     const { email } = req.body;
@@ -463,22 +483,18 @@ exports.forgotPassword = async (req, res) => {
       return res.status(400).json({ message: 'El correo electrónico es requerido' });
     }
 
-    // Verificar si el correo existe en la base de datos
-    const usuario = await prisma.Usuarios.findUnique({
+    const usuario = await prisma.usuarios.findUnique({ 
       where: { email }
     });
 
-    // Si el usuario no existe, enviar respuesta de error
     if (!usuario) {
       return res.status(404).json({ message: 'No existe una cuenta con este correo electrónico' });
     }
 
-    // Generar token único para recuperación
     const resetToken = crypto.randomBytes(32).toString('hex');
-    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hora de validez
+    const resetTokenExpiry = new Date(Date.now() + 3600000);
 
-    // Almacenar token en la base de datos
-    await prisma.Usuarios.update({
+    await prisma.usuarios.update({ 
       where: { id: usuario.id },
       data: {
         resetToken,
@@ -504,7 +520,6 @@ exports.forgotPassword = async (req, res) => {
       </div>
     `;
 
-    // Enviar correo
     const emailSent = await sendEmail(
       email,
       'Recuperación de contraseña - FastFood',
@@ -530,7 +545,6 @@ exports.forgotPassword = async (req, res) => {
   }
 };
 
-// Restablecer contraseña con token
 exports.resetPasswordForgot = async (req, res) => {
   try {
     const { token, newPassword } = req.body;
@@ -539,12 +553,11 @@ exports.resetPasswordForgot = async (req, res) => {
       return res.status(400).json({ message: 'Token y nueva contraseña son requeridos' });
     }
 
-    // Verificar si existe un usuario con ese token y que no haya expirado
-    const usuario = await prisma.Usuarios.findFirst({
+    const usuario = await prisma.usuarios.findFirst({ 
       where: {
         resetToken: token,
         resetTokenExpiry: {
-          gt: new Date() // Que el token no haya expirado
+          gt: new Date()
         }
       }
     });
@@ -557,10 +570,10 @@ exports.resetPasswordForgot = async (req, res) => {
 
     const hashedPassword = await bcrypt.hash(newPassword, 10);
 
-    await prisma.Usuarios.update({
+    await prisma.usuarios.update({ 
       where: { id: usuario.id },
       data: {
-        contrase_a: hashedPassword,
+        contrase_a: hashedPassword, 
         resetToken: null,
         resetTokenExpiry: null
       }
