@@ -7,7 +7,7 @@ exports.getPedidosCliente = async (req, res) => {
   try {
     const usuario_id = req.user.id;
     
-    // Buscar todos los pedidos del usuario
+    // Buscar todos los pedidos del usuarioo
     const pedidos = await prisma.pedidos.findMany({
       where: {
         usuario_id
