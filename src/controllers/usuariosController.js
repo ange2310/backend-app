@@ -1,6 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 const bcrypt = require('bcrypt');
+// Controlador para manejar las operaciones relacionadas con los usuarios
 exports.getUserProfile = async (req, res) => {
   try {
     const userId = req.user.id;
