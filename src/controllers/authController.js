@@ -22,7 +22,7 @@ const sendEmail = async (to, subject, htmlContent) => {
         return false;
       }
       
-      const transporter = nodemailer.createTransporter({
+      const transporter = nodemailer.createTransport({
         service: process.env.EMAIL_SERVICE || 'gmail',
         auth: {
           user: process.env.EMAIL_USER || 'fastfood.notificaciones@gmail.com',
