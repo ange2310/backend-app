@@ -20,7 +20,7 @@ const PORT = process.env.PORT || 5000;
 app.use(cors({
   origin: [
     'http://localhost:5173',
-    'http://golden-valkyrie-9f8483.netlify.app'
+    'https://sensational-dragon-9cfbd2.netlify.app'
   ],
   credentials: true
 }));
