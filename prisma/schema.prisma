@@ -1,0 +1,194 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+type PedidosDireccionEntrega {
+  barrio              String
+  comuna              Int
+  direccionEspecifica String
+}
+
+type PedidosProductos {
+  cantidad   Int
+  productoId String @db.ObjectId
+}
+
+model Restaurantes {
+  id          String                      @id @default(auto()) @map("_id") @db.ObjectId
+  nombre      String
+  descripcion String
+  ownerId     String                      @db.ObjectId
+  owner       Usuarios                    @relation(fields: [ownerId], references: [id])
+  imageUrl    String?
+  categorias  String[]
+      
+  
+  // Relaciones
+  productos   Productos[]                 @relation("RestaurantesProductos")
+  sucursales  Sucursales[]
+}
+
+model Sucursales {
+  id             String      @id @map("_id") @db.ObjectId @default(auto())
+  nombre         String
+  direccion      String
+  comuna         String
+  restaurante_Id String      @db.ObjectId
+  restaurante    Restaurantes @relation(fields: [restaurante_Id], references: [id])
+}
+
+/// Modelo para gestionar verificaciones de restaurantes
+model RestaurantesVerificaciones {
+  id                   String                           @id @default(auto()) @map("_id") @db.ObjectId
+  usuarioId            String                           @db.ObjectId
+  nombre               String
+  documentoPath        String
+  ubicaciones          RestaurantesVerificacionesUbicaciones[]
+  direccionesDetalladas RestaurantesVerificacionesDirecciones[]
+  fechaSolicitud       DateTime                         @default(now())
+  estado               String                          // pendiente, aprobado, rechazado
+  fechaAprobacion      DateTime?
+  fechaRechazo         DateTime?
+  motivoRechazo        String?
+  restauranteId        String?                          @db.ObjectId
+}
+
+type RestaurantesVerificacionesUbicaciones {
+  sucursal_Id String @db.ObjectId
+  comuna      String
+}
+
+type RestaurantesVerificacionesDirecciones {
+  sucursal_Id String @db.ObjectId
+  direccion   String
+}
+
+model Mensajes {
+  id              String   @id @default(auto()) @map("_id") @db.ObjectId
+  pedido_Id       String   @db.ObjectId
+  usuarioEmisor   String   @db.ObjectId
+  usuarioReceptor String   @db.ObjectId
+  texto           String
+  fechaEnvio      DateTime @db.Date
+  leido           Boolean  @default(false)
+}
+
+type UbicacionRepartidor {
+  lat         Float    @db.Double
+  lng         Float    @db.Double
+  heading     Float?   @db.Double
+  timestamp   DateTime @db.Date
+}
+
+model Pedidos {
+  id                  String                  @id @default(auto()) @map("_id") @db.ObjectId
+  estado              EstadoPedido
+  total               Float                   @db.Double
+  usuario_id          String                  @db.ObjectId
+  direccionEntrega    PedidosDireccionEntrega
+  repartidor_Id       String?                 @db.ObjectId
+  fechaDeCreacion     DateTime                @db.Date
+  productos           PedidosProductos[]
+  mensajes            String[]                @db.ObjectId // Array de ObjectIds
+  calificaciones      Calificaciones[]
+  UbicacionRepartidor UbicacionRepartidor?
+  metodoPago          String?                 // nuevo campo
+  pagos               Pagos[]
+  ubicacion           Ubicacion?
+  aceptadoPorRestaurante Boolean?              @default(false)  // Marca si el restaurante aceptó el pedido
+  listoPorRestaurante    Boolean?              @default(false)  // Marca si el pedido está preparado y listo
+  motivoRechazo          String?                                // Motivo si el restaurante rechaza el pedido
+}
+
+enum EstadoPedido {
+  Pendiente
+  En_Camino
+  Entregado
+  Cancelado
+}
+
+
+model Productos {
+  id               String       @id @default(auto()) @map("_id") @db.ObjectId
+  especificaciones String
+  nombre           String
+  precio           Float        @db.Double
+  categoria        String
+  imageUrl         String?
+  restaurante_Id   String       @db.ObjectId
+  restaurante      Restaurantes @relation("RestaurantesProductos", fields: [restaurante_Id], references: [id])
+  sucursales_Ids   String[]     @db.ObjectId
+}
+
+model Usuarios {
+  id                   String               @id @default(auto()) @map("_id") @db.ObjectId
+  nombreCompleto       String
+  email                String               @unique
+  contrase_a           String
+  telefono             Int
+  cedula               Int
+  direccion            String
+  rol                  String
+  vehiculo             String?
+  imageUrl             String?              // Nuevo campo para imagen de perfil
+  historialDirecciones HistorialDireccion[]
+  resetToken           String?              @db.String
+  resetTokenExpiry     DateTime?            
+  restaurantesIds      String[]             @db.ObjectId
+  verificado           Boolean              @default(true) // Los clientes y repartidores están verificados por defecto
+  restaurants          Restaurantes[]       // Relación inversa con restaurantes
+}
+
+type HistorialDireccion {
+  comuna              Int
+  barrio              String
+  direccionEspecifica String
+}
+
+model Calificaciones {
+  id                     String   @id @default(auto()) @map("_id") @db.ObjectId
+  calificacionRepartidor Int      @db.Int
+  calificacionPedido     Int      @db.Int
+  comentarios            String?
+  pedidoId               String   @db.ObjectId
+  pedido                 Pedidos  @relation(fields: [pedidoId], references: [id])
+}
+
+model Pagos {
+  id                   String       @id @default(auto()) @map("_id") @db.ObjectId
+  monto                Float        @db.Double
+  metodoPago           String       // "tarjeta" o "efectivo"
+  pedido_Id            String       @db.ObjectId
+  pedido               Pedidos      @relation(fields: [pedido_Id], references: [id])
+  estado               String       // "pendiente", "completado", "fallido", "reembolsado"
+  referenciaPago       String?      // ID de referencia de Stripe
+  fechaCreacion        DateTime     @default(now())
+  fechaActualizacion   DateTime     @updatedAt
+  reembolsos           Reembolsos[]
+}
+
+model Reembolsos {
+  id                String    @id @default(auto()) @map("_id") @db.ObjectId
+  pago_Id           String    @db.ObjectId
+  pago              Pagos     @relation(fields: [pago_Id], references: [id])
+  motivo            String
+  estado            String    // "procesado", "rechazado", "pendiente"
+  fechaSolicitud    DateTime  @default(now())
+  fechaProcesado    DateTime? 
+  montoReembolsado  Float?    @db.Double
+}
+
+model Ubicacion {
+  id                 String    @id @default(auto()) @map("_id") @db.ObjectId
+  usuarioId          String?   @db.ObjectId
+  pedidoId           String?   @db.ObjectId @unique
+  latitud            Float     @db.Double
+  longitud           Float     @db.Double
+  fechaActualizacion DateTime  @default(now())
+  pedido             Pedidos?  @relation(fields: [pedidoId], references: [id])
+}
