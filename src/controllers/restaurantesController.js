@@ -1,7 +1,7 @@
 const { PrismaClient } = require('@prisma/client');
 const prisma = new PrismaClient();
 
-// Obtener restaurantes del admin logueado
+// Obtener restaurantes del admin logueadoo
 exports.obtenerMisRestaurantes = async (req, res) => {
     try {
         const userId = req.user.id;
