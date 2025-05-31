@@ -7,7 +7,7 @@ exports.enviarMensaje = async (req, res) => {
     const { texto, usuarioReceptorId } = req.body;
     const usuarioEmisorId = req.user.id;
 
-    // Verificar que el pedido existe
+    // Verificar que el pedido existee
     const pedido = await prisma.pedidos.findUnique({
       where: { id: pedidoId }
     });
