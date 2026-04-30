@@ -1,46 +1,31 @@
-const nodemailer = require('nodemailer');
+const { Resend } = require('resend');
 require('dotenv').config();
 
 const sendEmail = async (to, subject, htmlContent) => {
-  // Para el modo desarrollo, solo mostrar en consola
-  if (process.env.EMAIL_SERVICE === 'console' || process.env.NODE_ENV === 'development') {
+  if (process.env.NODE_ENV === 'development') {
     console.log('\n========== CORREO ELECTRÓNICO ==========');
     console.log(`PARA: ${to}`);
     console.log(`ASUNTO: ${subject}`);
-    console.log('CONTENIDO HTML:');
-    console.log(htmlContent);
     console.log('========================================\n');
     return true;
   }
 
   try {
-    // Verificar configuración necesaria
-    if (!process.env.EMAIL_SERVICE || !process.env.EMAIL_USER) {
-      console.error('Error: Configuración de correo incompleta en .env');
-      return false;
-    }
-    
-  
-    const transporter = nodemailer.createTransport({
-      service: process.env.EMAIL_SERVICE,
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD
-      }
-    });
-    
-    // Configurar remitente
-    const from = process.env.EMAIL_FROM || `"FastFood App" <${process.env.EMAIL_USER}>`;
-    
-    // Enviar correo
-    const info = await transporter.sendMail({
-      from,
+    const resend = new Resend(process.env.RESEND_API_KEY);
+
+    const { data, error } = await resend.emails.send({
+      from: process.env.EMAIL_FROM || 'FastFood App <onboarding@resend.dev>',
       to,
       subject,
-      html: htmlContent
+      html: htmlContent,
     });
-    
-    console.log(`Correo enviado: ${info.messageId}`);
+
+    if (error) {
+      console.error('Error al enviar correo:', error);
+      return false;
+    }
+
+    console.log(`Correo enviado: ${data.id}`);
     return true;
   } catch (error) {
     console.error('Error al enviar correo:', error);
