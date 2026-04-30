@@ -17,11 +17,15 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 5000;
 
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://sensational-dragon-9cfbd2.netlify.app',
+  'https://frontend-app-qe9c-git-main-angelicas-projects-3fec4bd2.vercel.app',
+  ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean) : [])
+];
+
 app.use(cors({
-  origin: [
-    'http://localhost:5173',
-    'https://sensational-dragon-9cfbd2.netlify.app'
-  ],
+  origin: allowedOrigins,
   credentials: true
 }));
 
