@@ -283,7 +283,7 @@ exports.requestPasswordReset = async(req, res) => {
 
         const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${token}`;
 
-        await sendEmailService(
+        const emailSent = await sendEmailService(
             email,
             'Recuperación de contraseña - FastFood',
             `
@@ -304,6 +304,12 @@ exports.requestPasswordReset = async(req, res) => {
             </div>
             `
         );
+
+        if (!emailSent) {
+            console.error('Fallo al enviar correo de recuperación a:', email);
+        } else {
+            console.log('Correo de recuperación enviado a:', email);
+        }
 
         res.status(200).json({message: 'Si el correo existe, recibirás instrucciones para recuperar tu contraseña'});
     } catch (error) {
