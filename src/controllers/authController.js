@@ -2,51 +2,10 @@ const jwt = require('jsonwebtoken');
 const {PrismaClient} = require('@prisma/client');
 const bcrypt = require('bcrypt');
 const crypto = require('crypto');
-const nodemailer = require('nodemailer');
+const { sendEmail: sendEmailService } = require('../services/email/EmailService');
 
 const prisma = new PrismaClient();
 const saltRounds = 10;
-
-// Función para enviar correo
-const sendEmail = async (to, subject, htmlContent) => {
-  console.log('\n========== CORREO ELECTRÓNICO ==========');
-  console.log(`PARA: ${to}`);
-  console.log(`ASUNTO: ${subject}`);
-  console.log(`CONTENIDO HTML: ${htmlContent}`);
-  console.log('=========================================\n');
-
-  if (process.env.NODE_ENV === 'production') {
-    try {
-      if (!process.env.EMAIL_USER || !process.env.EMAIL_PASSWORD) {
-        console.error('ADVERTENCIA: Credenciales de correo no configuradas en .env');
-        return false;
-      }
-      
-      const transporter = nodemailer.createTransport({
-        service: process.env.EMAIL_SERVICE || 'gmail',
-        auth: {
-          user: process.env.EMAIL_USER || 'fastfood.notificaciones@gmail.com',
-          pass: process.env.EMAIL_PASSWORD || 'app_password_here'
-        }
-      });
-      
-      const info = await transporter.sendMail({
-        from: '"FastFood App" <fastfood.notificaciones@gmail.com>',
-        to,
-        subject,
-        html: htmlContent
-      });
-      
-      console.log('Correo enviado correctamente:', info.messageId);
-      return true;
-    } catch (error) {
-      console.error('Error al enviar correo:', error);
-      return false;
-    }
-  }
-  
-  return true;
-};
 
 // Registro de usuario
 exports.register = async(req, res) => {
@@ -172,7 +131,7 @@ exports.register = async(req, res) => {
 
         try {
             console.log('Intentando enviar correo de bienvenida a:', email);
-            await sendEmail(email, 'Bienvenido a FastFood', htmlCorreo);
+            await sendEmailService(email, 'Bienvenido a FastFood', htmlCorreo);
             console.log('Correo de bienvenida enviado');
         } catch (emailError) {
             console.error('Error al enviar correo de bienvenida:', emailError);
@@ -324,7 +283,7 @@ exports.requestPasswordReset = async(req, res) => {
 
         const resetUrl = `${process.env.FRONTEND_URL || 'http://localhost:5173'}/reset-password/${token}`;
 
-        await sendEmail(
+        await sendEmailService(
             email,
             'Recuperación de contraseña - FastFood',
             `
@@ -520,7 +479,7 @@ exports.forgotPassword = async (req, res) => {
       </div>
     `;
 
-    const emailSent = await sendEmail(
+const emailSent = await sendEmailService(
       email,
       'Recuperación de contraseña - FastFood',
       htmlContent
