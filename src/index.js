@@ -22,6 +22,7 @@ const allowedOrigins = [
   'https://sensational-dragon-9cfbd2.netlify.app',
   'https://frontend-app-qe9c.vercel.app',
   'https://frontend-app-qe9c-git-main-angelicas-projects-3fec4bd2.vercel.app',
+  'https://frontend-app-vert-theta.vercel.app',
   ...(process.env.ALLOWED_ORIGINS ? process.env.ALLOWED_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean) : [])
 ];
 
